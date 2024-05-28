@@ -138,8 +138,10 @@ public class StationMonitor : IDisposable
             string totalEnergyQuery = $@"
             from(bucket: ""{_settings.CurrentValue.InfluxDbBucket}"")
             |> range(start: -1y)
-            |> filter(fn: (r) => r[""_measurement""] == ""weather"" and r[""stationId""] == ""{_station.StationId}"")
-            |> keep(columns: [""_time"", ""totalEnergy""])
+            |> filter(fn: (r) => r[""_measurement""] == ""weather"")
+            |> filter(fn: (r) => r[""_field""] == ""totalEnergy"")
+            |> filter(fn: (r) => r[""stationId""] == ""{_station.StationId}"")
+            |> keep(columns: [""_time"", ""_value""])
             |> last()
         ";
 
@@ -157,7 +159,8 @@ public class StationMonitor : IDisposable
             from(bucket: ""{_settings.CurrentValue.InfluxDbBucket}"")
             |> range(start: -1d)
             |> filter(fn: (r) => r[""_measurement""] == ""weather"" and r[""stationId""] == ""{_station.StationId}"")
-            |> keep(columns: [""_time"", ""totalEnergyToday""])
+            |> filter(fn: (r) => r[""_field""] == ""totalEnergyToday"")
+            |> keep(columns: [""_time"", ""_value""])
             |> last()
         ";
 
@@ -166,7 +169,10 @@ public class StationMonitor : IDisposable
             {
                 foreach (var record in totalEnergyTodayTable.Records)
                 {
-                    _totalEnergyToday = (double)record.GetValue();
+                    if (record.GetTimeInDateTime()?.ToUniversalTime().Date == DateTime.UtcNow.Date)
+                    {
+                        _totalEnergyToday = (double)record.GetValue();
+                    }
                 }
             }
 
